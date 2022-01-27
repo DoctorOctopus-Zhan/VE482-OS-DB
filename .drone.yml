@@ -1,0 +1,34 @@
+kind: pipeline
+type: ssh
+name: p2
+server:
+  host:
+    from_secret: host
+  user:
+    from_secret: username
+  ssh_key:
+    from_secret: ssh_key
+steps:
+- name: prepare
+  commands:
+  - cp -r /opt/lemondb/sample .
+  - cp -r /opt/lemondb/sample_stdout .
+  - cp -r /opt/lemondb/db .
+- name: build
+  commands:
+  - mkdir build && cd build
+  - cmake -DCMAKE_C_COMPILER=/usr/bin/clang -DCMAKE_CXX_COMPILER=/usr/bin/clang++ ../src
+  - cmake --build .
+- name: run
+  commands:
+  - cd build
+  - ./lemondb --listen ../sample/few_insert_delete.query > few_insert_delete.out
+  - ./lemondb --listen ../sample/few_read.query > few_read.out
+  - ./lemondb --listen ../sample/few_read_dup.query > few_read_dup.out
+  - cmake --build .
+- name: check
+  commands:
+  - cd build
+  - diff few_insert_delete.out ../sample_stdout/few_insert_delete.out
+  - diff few_read.out ../sample_stdout/few_read.out
+  - diff few_read_dup.out ../sample_stdout/few_read_dup.out
